@@ -1,0 +1,2 @@
+[console_scripts]
+dejacode = dejacode.cli:main

@@ -50,6 +50,37 @@ def clean_text(value: Any) -> str:
     return raw.strip()
 
 
+
+# Search representation only: keep the original statement untouched for display.
+# These are common CodeChef scrape boilerplate phrases, not algorithmic content.
+_BOILERPLATE = (
+    r"All submissions for this problem are available\.?",
+    r"Read (?:the )?problems? statements? in [^.]{0,140}(?:as well)?\.?",
+    r"(?:Problem Statement|Problem Description)\s*[:\-]?\s*",
+)
+_INPUT_HEADING = re.compile(
+    r"\s+(?:Input|Input Format|Input Specification)\s+(?=(?:The|First|Each|There|An|A|For|In|One|Two|You|N|T|Next|Given)\b)",
+    flags=re.IGNORECASE,
+)
+
+
+def search_representation(title: str, statement: str, *, max_words: int = 270) -> str:
+    """Compact the *task* before the Input/Output sections for transformer limits.
+
+    The full statement is preserved separately. The truncation is intentionally
+    conservative; some tasks embed necessary conditions late in the story.
+    This does not inspect problem tags, solutions, or ground truth.
+    """
+    text = clean_text(statement)
+    for phrase in _BOILERPLATE:
+        text = re.sub(phrase, ' ', text, flags=re.I)
+    text = _INPUT_HEADING.split(text, maxsplit=1)[0]
+    text = re.sub(r'\s+', ' ', text).strip()
+    words = text.split()
+    if len(words) > max_words:
+        text = ' '.join(words[:max_words])
+    return (clean_text(title) + '. ' + text).strip()[:3000]
+
 def _first(row: dict, aliases: tuple[str, ...], override: str | None = None) -> Any:
     if override:
         # Explicit schema mapping always takes precedence.
@@ -185,7 +216,7 @@ def load_problems(path: str | Path, *, statement_col: str | None = None,
                 url = f'https://www.codechef.com/problems/{code}'
             doc = {'code': code, 'title': title, 'statement': statement, 'tags': tags,
                    'difficulty': difficulty, 'url': url,
-                   'search_text': (title + '. ' + statement)[:14000]}
+                   'search_text': search_representation(title, statement)}
             if code in unique:
                 diagnostics['duplicates'] += 1
                 # Keep the longer, better described statement; never merge solutions.

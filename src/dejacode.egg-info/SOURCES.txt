@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+src/dejacode/__init__.py
+src/dejacode/cli.py
+src/dejacode/data.py
+src/dejacode/engine.py
+src/dejacode/evaluation.py
+src/dejacode.egg-info/PKG-INFO
+src/dejacode.egg-info/SOURCES.txt
+src/dejacode.egg-info/dependency_links.txt
+src/dejacode.egg-info/entry_points.txt
+src/dejacode.egg-info/requires.txt
+src/dejacode.egg-info/top_level.txt
+tests/test_system.py
+tests/test_v2.py

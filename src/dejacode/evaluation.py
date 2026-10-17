@@ -48,7 +48,9 @@ def evaluate(index, judgments: list[dict], *, k: int = 5,
     report = {'k': k, 'source': 'explicit_judgments', 'n_queries': 0, 'methods': {},
               'warnings': ['Relevance labels must be manually verified. Neither shared tags nor lexical overlap proves algorithmic similarity.']}
     for method in methods:
-        if method != 'tfidf' and not index.has_semantic:
+        if method == 'semantic' and not index.has_semantic:
+            continue
+        if method == 'bm25' and not index.has_bm25:
             continue
         scores = defaultdict(list)
         mistakes = []
@@ -78,18 +80,39 @@ def evaluate(index, judgments: list[dict], *, k: int = 5,
     return report
 
 
+# Only recognizable algorithm families for exploratory weak-label evaluation.
+# Contest names, handle names, difficulty labels and years are excluded.
+ALGORITHM_PROXY_TAGS = frozenset({
+    'graph', 'graphs', 'tree', 'trees', 'dfs', 'bfs', 'shortest-path',
+    'dijkstra', 'bellman-ford', 'floyd-warshall', 'heavy-light', 'segment-tree',
+    'fenwick-tree', 'binary-search', 'dynamic-programming', 'dp', 'greedy',
+    'knapsack', 'prefix-sum', 'two-pointers', 'sliding-window', 'strings',
+    'string', 'combinatorics', 'number-theory', 'bitmask', 'bitmasking',
+    'sorting', 'disjoint-set-union', 'dsu', 'union-find', 'matching',
+    'geometry', 'trie', 'hashing', 'matrix', 'flow', 'fft', 'backtracking',
+})
+
+
 def build_weak_tag_judgments(index, *, max_queries: int = 100) -> list[dict]:
-    """Optional *proxy* eval, NEVER a substitute for judged algorithmic relevance."""
+    """Weak, imperfect proxy using *only* recognizable algorithm tags.
+
+    Never present these as human-verified correctness scores. Restricting to
+    algorithm families avoids accidentally calling shared author/difficulty or
+    contest labels a relevant solution-technique pair.
+    """
     df = index.documents
     tag_to_codes: dict[str, set] = defaultdict(set)
     for _, row in df.iterrows():
         for tag in row['tags'] if isinstance(row['tags'], list) else []:
-            tag_to_codes[str(tag).lower()].add(str(row['code']))
+            t = str(tag).lower()
+            if t in ALGORITHM_PROXY_TAGS:
+                tag_to_codes[t].add(str(row['code']))
     entries = []
     for _, row in df.iterrows():
         code = str(row['code'])
         tags = row['tags'] if isinstance(row['tags'], list) else []
-        rel = set().union(*(tag_to_codes[str(t).lower()] for t in tags)) if tags else set()
+        rel = set().union(*(tag_to_codes[str(t).lower()] for t in tags
+                            if str(t).lower() in tag_to_codes)) if tags else set()
         rel.discard(code)
         if rel:
             entries.append({'query': row['search_text'], 'query_code': code,
