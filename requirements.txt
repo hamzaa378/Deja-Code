@@ -1,0 +1,3 @@
+# Baseline engine and evaluation
+-e .
+pytest>=8

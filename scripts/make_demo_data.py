@@ -1,0 +1,82 @@
+"""Create explicitly *synthetic* statements for offline functional tests; not CodeChef data."""
+import csv
+import json
+from pathlib import Path
+
+GROUPS = {
+ 'unweighted shortest paths': [
+  ('Subway Transfers', 'Stations are joined by two-way underground tunnels. Riding through any tunnel counts as one transfer. Given a start station and a destination, compute the fewest tunnels that must be traversed, or report when no route exists.'),
+  ('Campus Walkways', 'You receive a list of campus buildings linked by corridors. Every corridor has the same cost of one step. Determine the minimum number of corridors needed to reach the library from the main gate.'),
+  ('Puzzle Moves', 'A board configuration can change to a set of permitted neighboring configurations in a single move. All moves have equal cost. Find the minimum number of legal moves needed to reach the goal configuration.'),
+  ('Message Relays', 'Computers form an undirected network and each direct link forwards a message in exactly one round. Output the smallest number of forwarding rounds between two specified computers.'),
+  ('Castle Doors', 'Each room has doors to some neighboring rooms. Every door requires one action to pass. Find the least number of doors the explorer must open to reach the treasure room.'),
+ ],
+ 'weighted shortest paths': [
+  ('Fuel Efficient Roads', 'Cities are joined by roads with different positive fuel costs. A driver wants a route from the source to the destination minimizing total fuel cost. Return the smallest sum of weights along a connected path.'),
+  ('Delivery Charges', 'Routes between depots each charge a nonnegative toll. From a chosen starting depot, compute the minimum total toll required to reach every reachable other depot.'),
+  ('Fiber Cable Latency', 'Each directed cable in a communication network has a nonnegative delay. Determine the lowest total delay from server A to server B where path delay is the sum over every traversed cable.'),
+  ('Mountain Trails', 'Trails connect mountain huts, and each trail has an energy cost that is never negative. Compute a path that uses the least sum of energy while respecting the network of valid trails.'),
+  ('City Taxi Zones', 'Moving from one zone to another follows directed roads with given nonnegative prices. Find the cheapest possible total fare from the origin zone to the requested destination zone.'),
+ ],
+ 'zero one knapsack': [
+  ('Festival Backpack', 'Each souvenir has a weight and a happiness score. The backpack has a maximum weight capacity. Choose each souvenir at most once to maximize the combined happiness without exceeding capacity.'),
+  ('Satellite Instruments', 'Each scientific instrument consumes some payload mass and contributes value to the mission. A rocket has a strict mass limit. Decide which instruments to include, with no repeated choices, for maximum value.'),
+  ('Scholarship Projects', 'Every research project requires a number of budget units and gives a fixed impact score. Select any subset of projects under a fixed total budget so that the impact sum is as large as possible.'),
+  ('Gaming Loadout', 'A player may equip each unique accessory at most one time. Accessories cost limited inventory slots and produce different bonuses. Find the set that yields the highest total bonus within the slot budget.'),
+  ('Cargo Selection', 'A van can carry at most W kilograms. Each available crate has a fixed weight and resale value and cannot be divided or selected twice. Maximize the total resale value loaded in the van.'),
+ ],
+ 'binary search on answer': [
+  ('Factory Deadline', 'Each machine can produce a fixed number of parts per minute. Determine the smallest integer time such that together the machines can produce at least the required number of parts.'),
+  ('Book Distribution', 'A sequence of books must be split in order among a fixed number of students. Minimize the largest number of pages assigned to any one student, deciding feasibility under a proposed limit.'),
+  ('Internet Bandwidth', 'Users need fixed transfer quantities and a server delivers at a constant rate per second. Find the minimum integer rate capable of completing all transfers before a given deadline.'),
+  ('Banana Warehouse', 'A worker must empty several fruit piles in a fixed number of hours. Each hour they consume up to k fruits from one pile. Find the minimum positive integer k that makes finishing possible.'),
+  ('Shipping Capacity', 'Packages must be shipped in order over D days using a boat with identical daily capacity. Compute the smallest capacity that permits delivering every package within the allotted number of days.'),
+ ],
+ 'sliding window': [
+  ('Mobile Data Streak', 'An array lists nonnegative megabytes consumed each hour. Find the longest contiguous interval whose total usage does not exceed a fixed data allowance.'),
+  ('Affordable Vacation', 'Daily accommodation prices are nonnegative and the traveler has a total budget. Return the maximum length of consecutive vacation days whose combined price remains within budget.'),
+  ('Running Energy', 'A runner logs nonnegative energy expenditure each day. Locate the longest uninterrupted span of days for which total energy does not exceed a given upper limit.'),
+  ('Concert Tickets', 'Ticket prices for consecutive evenings are nonnegative. Determine the greatest number of adjacent evenings that can be attended with total spending at most B.'),
+  ('Continuous Study', 'An array gives nonnegative effort required per chapter. Find a longest block of consecutive chapters that can be completed using no more than the available effort credits.'),
+ ],
+ 'disjoint set union': [
+  ('Friend Circles', 'Initially everyone belongs to a separate group. Friendships are added one at a time, and queries ask whether two people are in the same connected friendship component.'),
+  ('Growing Islands', 'Initially land parcels are disconnected. Bridges are permanently added between pairs of parcels, followed by questions asking whether two parcels have become connected by some chain of bridges.'),
+  ('Network Cabling', 'Machines begin isolated and cables are installed but never removed. Support operations to merge two connected machine groups and determine whether a pair of machines can communicate.'),
+  ('Team Alliances', 'Separate teams gradually sign alliances that combine their connected coalitions. Given a stream of merge operations and membership queries, decide whether two teams share one coalition.'),
+  ('Rail Connections', 'Train stations initially have no links. Add permanent rail links dynamically, and for each question answer whether two stations belong to the same connected set of stations.'),
+ ],
+ 'interval scheduling': [
+  ('Conference Rooms', 'A set of talks each has a start and finish time. Only one room is available, and talks cannot overlap. Pick as many distinct talks as possible without overlapping time intervals.'),
+  ('Sports Broadcasting', 'Each match has a fixed starting and ending hour. A single television channel cannot broadcast two simultaneous matches. Maximize the count of whole matches selected for the channel.'),
+  ('Exam Supervision', 'Teachers can supervise only one timed exam at once. Given the start and end of every available session, select the greatest possible number of nonoverlapping sessions.'),
+  ('Airport Gate Slot', 'A gate can accommodate a flight during its required time interval. No two flights can share the gate at once. Choose the maximum number of flights whose assigned periods do not overlap.'),
+  ('Volunteer Shifts', 'Each optional volunteer activity occupies a fixed start-end interval. A participant wants to attend the largest number of activities, never participating in overlapping intervals.'),
+ ],
+}
+
+def main():
+    root = Path(__file__).resolve().parents[1]
+    target = root / 'data/demo/demo_problems.csv'
+    target.parent.mkdir(exist_ok=True, parents=True)
+    records = []
+    groups = list(GROUPS)
+    for g, (concept, items) in enumerate(GROUPS.items()):
+        for ix, (title, statement) in enumerate(items, start=1):
+            records.append({'problem_code': f'demo-{g+1:02d}-{ix:02d}',
+                            'problem_name': title, 'problem_statement': statement,
+                            'tags': concept, 'difficulty': 'demo', 'url': ''})
+    with target.open('w', newline='', encoding='utf8') as f:
+        writer = csv.DictWriter(f, fieldnames=list(records[0])); writer.writeheader(); writer.writerows(records)
+    judged = []
+    for g, (concept, items) in enumerate(GROUPS.items()):
+        judged.append({'query': items[0][1], 'query_code': f'demo-{g+1:02d}-01',
+                       'relevant_codes': [f'demo-{g+1:02d}-{i:02d}' for i in range(2, 6)],
+                       'note': 'Author-labeled synthetic demo, NOT CodeChef evaluation'})
+    path = root / 'evaluation/demo_judgments.jsonl'
+    path.write_text(''.join(json.dumps(j) + '\n' for j in judged), encoding='utf8')
+    print(f'Created {len(records)} original synthetic examples in {target}')
+    print(f'Created {len(judged)} synthetic demonstration judgments in {path}')
+
+if __name__ == '__main__':
+    main()

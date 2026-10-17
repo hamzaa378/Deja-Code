@@ -1,0 +1,2 @@
+# Includes transformer-based semantics, dashboard, and parquet support.
+-e .[ui,semantic,parquet,test]
